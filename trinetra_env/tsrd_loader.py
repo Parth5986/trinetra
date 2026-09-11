@@ -1,3 +1,13 @@
+#To see the result of this file make the commented code below to code again and run this file.
+# you will get this output for now
+# -------TSRD TRANSMITTER SUMMARY--------
+# FixedMultiSimultaneous: 6
+# FixedSingle: 49
+# HoppingSawtooth: 11
+# RandomRange: 6
+# RandomFixed: 7
+# HoppingLinear: 9
+
 from __future__ import annotations
 
 import ast
