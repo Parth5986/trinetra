@@ -1,6 +1,6 @@
 import h5py
 
-file_path = "D:/trinetra/data/tsrd/data/tsrd/archive/test/test_0.h5"
+file_path = "D:/trinetra/data/tsrd/archive/test/test_0.h5"
 
 with h5py.File(file_path, "r") as f:
 
