@@ -15,7 +15,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import h5py
-# from config import EnvConfig
+from config import EnvConfig
 
 class TsrdLoader:
     def __init__(self,h5_path:str):
@@ -74,8 +74,8 @@ class TsrdLoader:
 
 
 # use this command to test
-# loader = TsrdLoader(EnvConfig.tsrd_path)
-# loader.summary()
+loader = TsrdLoader(EnvConfig.tsrd_path)
+loader.summary()
 
 
 
