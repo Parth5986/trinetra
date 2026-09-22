@@ -19,8 +19,8 @@ def ppo(
 
         obs_tensor = torch.tensor(
             observations[i],
-            dtype=torch.float32
-        )
+            dtype = torch.float32
+        ).reshape(1, -1)
 
         logits = actor(obs_tensor)
         value = critic(obs_tensor)

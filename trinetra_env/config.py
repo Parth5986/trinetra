@@ -8,7 +8,7 @@ class EnvConfig:
     n_emitters:int = 3
     step_time_sec:int = 0.01
 
-    tsrd_path:str = "../data/tsrd/archive/test/test_0.h5"
+    tsrd_path:str = r"D:\trinetra\data\tsrd\archive\test\test_0.h5"
 
     min_frequency:float = 1000.0
     max_frequency:float = 12000.0

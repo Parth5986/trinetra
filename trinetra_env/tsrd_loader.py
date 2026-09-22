@@ -74,8 +74,8 @@ class TsrdLoader:
 
 
 # use this command to test
-loader = TsrdLoader(EnvConfig.tsrd_path)
-loader.summary()
+# loader = TsrdLoader(EnvConfig.tsrd_path)
+# loader.summary()
 
 
 

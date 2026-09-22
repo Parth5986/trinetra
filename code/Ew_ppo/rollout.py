@@ -19,41 +19,42 @@ def collect_rollout(env, actor, critic, device):
             obs,
             dtype = torch.float32,
             device = device
-        )
-    #Actor
+        ).reshape(1, -1)
 
-    logits = actor(obs_tensor)
+        # Actor
 
-    distribution = Categorical(logits = logits)
+        logits = actor(obs_tensor)
 
-    action = distribution.sample()
+        distribution = Categorical(logits = logits)
 
-    log_prob = distribution.log_prob(action)
+        action = distribution.sample()
 
-    #critic
+        log_prob = distribution.log_prob(action)
 
-    value = critic(obs_tensor)
+        # Critic
 
-    #Envioronment
+        value = critic(obs_tensor)
 
-    next_obs, reward, terminated, truncated, info = env.step(action.item())
+        # Environment
 
-    done = truncated or terminated
+        next_obs, reward, terminated, truncated, info = env.step(action.item())
 
-     # Store rollout data
-    observations.append(obs)
-    actions.append(action.detach())
-    rewards.append(reward)
-    dones.append(done)
-    log_probs.append(log_prob.detach())
-    values.append(value.squeeze().detach())
+        done = truncated or terminated
 
-    obs = next_obs
+        # Store rollout data
 
+        observations.append(obs)
+        actions.append(action.detach())
+        rewards.append(reward)
+        dones.append(done)
+        log_probs.append(log_prob.detach())
+        values.append(value.squeeze().detach())
+
+        obs = next_obs
 
     return (
         observations,
-        actions, 
+        actions,
         rewards,
         dones,
         log_probs,
