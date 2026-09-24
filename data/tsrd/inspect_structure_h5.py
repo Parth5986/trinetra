@@ -1,6 +1,7 @@
 import h5py
+from pathlib import Path
 
-file_path = "D:/trinetra/data/tsrd/archive/test/test_0.h5"
+file_path = str(Path(__file__).resolve().parent / "archive" / "test" / "test_0.h5")
 
 with h5py.File(file_path, "r") as f:
 

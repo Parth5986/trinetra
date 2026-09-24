@@ -146,6 +146,15 @@ class EWenv(gym.Env):
 
             return selected
 
+        # Non-balanced sampling: pick uniformly from all in-range transmitters.
+        selected = list(self.np_random.choice(
+            self.in_range_transmitters,
+            size = min(n, len(self.in_range_transmitters)),
+            replace = False,
+        ))
+
+        return selected
+
     def frequency_to_band(self,frequency_mhz: float):
 
         if frequency_mhz<self.config.min_frequency or frequency_mhz>self.config.max_frequency:
@@ -291,7 +300,6 @@ class EWenv(gym.Env):
                 reward = (
                     self.config.empty_band
                 )
-
 
         self.staleness += 1.0
 

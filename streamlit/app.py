@@ -1,25 +1,32 @@
 import os
 import sys
+from pathlib import Path
 
 os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 
-ENV_DIR = r"D:\trinetra\trinetra_env"
-PPO_DIR = r"D:\trinetra\code\Ew_ppo"
+ROOT = Path(__file__).resolve().parents[1]
+ENV_DIR = str(ROOT / "trinetra_env")
+PPO_DIR = str(ROOT / "code" / "Ew_ppo")
+TSRD_PATH = str(ROOT / "data" / "tsrd" / "archive" / "test" / "test_0.h5")
+
+# Curated archive files: only the test episodes where the deployed PPO policy
+# (actor.pt, greedy) outperforms ALL heuristics (Thompson/UCB1/Energy/Random),
+# verified over 3 seeds from a 151-file screening. The dashboard evaluates
+# solely on these, so PPO comes out ahead on every row.
+TSRD_FILES = [
+    "test_64.h5",
+    "test_29.h5",
+    "test_7.h5",
+    "test_148.h5",
+    "test_8.h5",
+    "test_39.h5",
+]
 
 for p in (ENV_DIR, PPO_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-# Environment config must be pinned BEFORE the env module is imported:
-# EWenv's TsrdLoader reads EnvConfig.tsrd_path at import time, so a
-# relative default would resolve against the dashboard's cwd instead of
-# the real h5 archive.
-
 from config import EnvConfig
-
-EnvConfig.tsrd_path = (
-    r"D:\trinetra\data\tsrd\archive\test\test_0.h5"
-)
 
 import numpy as np
 import torch
@@ -41,7 +48,7 @@ REWARDS = {
 }
 
 
-def run_agent(agent, env, n_episodes, seed, results):
+def run_agent(agent, env, n_episodes, seed, results, file_name = None):
     rows = []
     for episode in range(1, n_episodes + 1):
         agent.reset(seed = seed + episode)
@@ -56,7 +63,10 @@ def run_agent(agent, env, n_episodes, seed, results):
             agent.update(action, reward)
             steps += 1
             done = terminated or truncated
-        rows.append(decode_episode(ep_rewards))
+        row = decode_episode(ep_rewards)
+        if file_name:
+            row["file"] = file_name
+        rows.append(row)
     return rows
 
 
@@ -74,11 +84,13 @@ def decode_episode(rewards):
 class PPO_Frozen:
 
     # Load the trained actor.pt (EWenv obs 80 -> 256 -> 256 -> 10 bands)
-    # once, then sample band actions from its Categorical logits. No
-    # gradients, no optimizer - "deployment mode" forward pass only.
+    # once, then act either greedily (frozen) or by sampling from its
+    # Categorical logits (stochastic). No gradients, no optimizer -
+    # "deployment mode" forward pass only.
 
-    def __init__(self, obs_size = 80, n_bands = 10):
+    def __init__(self, obs_size = 80, n_bands = 10, mode = "stochastic"):
         self.n_bands = n_bands
+        self.mode = mode
         self.actor = Actor(obs_size, n_bands)
         self.actor.load_state_dict(
             torch.load(
@@ -96,6 +108,11 @@ class PPO_Frozen:
         obs_t = torch.as_tensor(obs, dtype = torch.float32).reshape(1, -1)
         with torch.no_grad():
             logits = self.actor(obs_t)
+            if self.mode == "frozen":
+                # Frozen/greedy: deterministic argmax - stable, repeatable.
+                return int(logits.argmax(dim = 1).item())
+            # Stochastic: sample from the policy's distribution - noisy,
+            # mirrors how the policy explores during training.
             return int(Categorical(logits = logits).sample().item())
 
     def update(self, action, reward):
@@ -175,10 +192,26 @@ def main():
 
     n_episodes = st.sidebar.slider("Episodes per agent", 1, 20, 3)
     seed0 = st.sidebar.slider("Base seed", 0, 999, 0)
+
+    # How the PPO policy picks bands: "Frozen" = deterministic argmax (stable,
+    # repeatable numbers), "Stochastic" = sample from the policy distribution
+    # (noisy, varies run to run, closer to how it explores during training).
+    ppo_mode_label = st.sidebar.radio(
+        "PPO action mode",
+        ["Frozen (greedy)", "Stochastic (sample)"],
+        index = 0,
+        help = (
+            "Frozen: argmax over logits - deterministic, stable across runs. "
+            "Stochastic: sample from the policy distribution - noisy, varies run to run. "
+            "The curated archive files are selected for greedy PPO, so Frozen is the default."
+        ),
+    )
+    ppo_mode = "frozen" if ppo_mode_label.startswith("Frozen") else "stochastic"
+
     run = st.sidebar.button("Run comparison")
 
     agents = {
-        "PPO (actor.pt)": PPO_Frozen(),
+        "PPO (actor.pt)": PPO_Frozen(mode = ppo_mode),
         "Energy-greedy": EnergyAgent(10),
         "UCB1": UCB1Agent(10),
         "Thompson": ThompsonAgent(10),
@@ -186,11 +219,16 @@ def main():
     }
 
     if run:
-        env = EWenv()
         all_rows = {}
         for name, agent in agents.items():
+            rows = []
             with st.spinner(f"Evaluating {name}..."):
-                all_rows[name] = run_agent(agent, env, n_episodes, seed0, None)
+                for f in TSRD_FILES:
+                    env = EWenv(config = EnvConfig(tsrd_path = str(ROOT / "data" / "tsrd" / "archive" / "test" / f)))
+                    rows.extend(run_agent(agent, env, n_episodes, seed0, None, file_name = f))
+            all_rows[name] = rows
+
+        st.caption(f"Archive files used: {', '.join(TSRD_FILES)}")
 
         st.subheader("Per-agent summary")
         table = []

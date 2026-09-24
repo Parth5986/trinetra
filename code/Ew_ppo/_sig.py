@@ -1,6 +1,8 @@
 import sys, ast, inspect
 
-ROOT = r"D:\trinetra\code\Ew_ppo"
+from pathlib import Path
+
+ROOT = str(Path(__file__).resolve().parent)
 
 for mod, fn in [("ppo", "ppo"), ("gae", "calculate_gae"), ("gae", "calculate_returns")]:
     tree = ast.parse(open(rf"{ROOT}\{mod}.py", encoding="utf-8").read())

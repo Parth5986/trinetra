@@ -16,6 +16,15 @@ class Actor(nn.Module):
         )
     def forward(self, x):
         x = self.flatten(x)
+        # Per-sample standardization: raw observations are uncalibrated
+        # energy magnitudes that vary wildly in scale between archives.
+        # Normalize each sample to zero mean / unit std so the fully
+        # connected body learns scale-invariant features. Fixed transform
+        # (no learnable params, no buffers), so it behaves identically at
+        # train and inference and old state_dicts remain loadable.
+        x = (x - x.mean(dim = -1, keepdim = True)) / (
+            x.std(dim = -1, keepdim = True) + 1e-6
+        )
         logits = self.linear_relu_stack(x)
 
         return logits
@@ -36,6 +45,9 @@ class Critic(nn.Module):
         )
     def forward(self, x):
         x = self.flatten(x)
+        x = (x - x.mean(dim = -1, keepdim = True)) / (
+            x.std(dim = -1, keepdim = True) + 1e-6
+        )
         value = self.linear_relu_stack(x)
 
         return value

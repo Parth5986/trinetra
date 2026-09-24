@@ -10,7 +10,6 @@ def main():
         n_bands=10,
         n_emitters=3,
         max_steps=100,
-        tsrd_path="../data/tsrd/archive/test/test_0.h5",
         balanced_sampling=True,
     )
 

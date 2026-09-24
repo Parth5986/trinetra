@@ -1,8 +1,9 @@
 import h5py
 import ast
 from collections import Counter
+from pathlib import Path
 
-file_path = "archive/test/test_0.h5"
+file_path = str(Path(__file__).resolve().parent / "archive" / "test" / "test_0.h5")
 
 frequency_modes = Counter()
 pri_modes = Counter()
